@@ -35,3 +35,14 @@ aws:
   enabled: true
   bucket: "geo-risk-pipeline-mahtab"
   prefix: "geo-risk-pipeline"
+dynamodb:
+  enabled: false
+  table_name: "geo-risk-pipeline-region-risk"
+
+redshift:
+  enabled: false
+  host: ""
+  port: 5439
+  database: "dev"
+  user: ""
+  iam_role_arn: ""
