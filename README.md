@@ -5,12 +5,6 @@ A small end-to-end data engineering pipeline that ingests geospatial data
 statistics per region, loads the results into a warehouse using a star
 schema, and produces a summary report and a map.
 
-I built this to get hands-on with the raster/vector overlay work, data
-modeling, and pipeline design that comes up in climate/sustainability-style
-data engineering roles - ingesting hazard and risk data from multiple
-geospatial formats, turning it into clean tabular data, and making it
-queryable.
-
 ![risk map](outputs/risk_map.png)
 
 ## What it does
