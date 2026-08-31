@@ -1,0 +1,37 @@
+# Pipeline configuration
+# Paths are relative to the project root.
+
+sources:
+  regions_vector: "data/raw/regions.geojson"
+  hazard_raster: "data/raw/hazard_surface.tif"
+  region_name_field: "name"          # property in the geojson used as the region label
+
+raster_generation:
+  # Only used by src/generate_hazard_raster.py. This lets someone regenerate
+  # the demo raster with a different seed/shape without touching the code.
+  bbox: [-125.0, 24.0, -66.0, 50.0]  # CONUS bounding box: west, south, east, north
+  width: 400
+  height: 200
+  seed: 17
+
+quality:
+  max_null_geometry_pct: 0.0    # fail the run if any region has a null/invalid geometry
+  hazard_value_range: [0, 100]  # expected range for the hazard index
+
+risk_tiers:
+  low_max: 25
+  medium_max: 50
+  high_max: 75
+  # anything above high_max is classified "severe"
+
+warehouse:
+  path: "warehouse/risk_warehouse.duckdb"
+
+outputs:
+  summary_csv: "outputs/regional_risk_summary.csv"
+  map_png: "outputs/risk_map.png"
+
+aws:
+  enabled: true
+  bucket: "geo-risk-pipeline-mahtab"
+  prefix: "geo-risk-pipeline"
