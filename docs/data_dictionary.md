@@ -66,3 +66,25 @@ Defined in `config/pipeline_config.yaml` under `risk_tiers`, currently:
 
 These are arbitrary round numbers for the demo, not derived from any real
 risk model - swap in real thresholds once a real hazard raster is in use.
+
+## DynamoDB table: `geo-risk-pipeline-region-risk`
+
+A serving-layer cache, not a second copy of the warehouse. Synced from the
+warehouse's *latest run only* by `src/dynamo_sync.py` - it does not carry
+history the way `fact_regional_risk` does. If you need "what was Texas's
+risk score three runs ago," that's a warehouse query, not a DynamoDB one.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `region_name` | String (partition key) | Matches `dim_region.region_name`. |
+| `hazard_mean` | Number | Same value as `fact_regional_risk.hazard_mean` for the latest run. Omitted entirely (not written as null) for regions with no raster coverage, since DynamoDB has no natural null-vs-missing distinction worth relying on here. |
+| `risk_tier` | String | `Low`/`Medium`/`High`/`Severe`, or `"Unknown"` if the region has no coverage. |
+| `pixel_count` | Number | Same as the warehouse column. |
+| `run_id` | String | Which pipeline run this snapshot came from - lets you tell how stale the cached value is. |
+| `updated_at` | String (ISO 8601) | When `dynamo_sync.py` wrote this item, not when the pipeline run itself happened. |
+
+Read by `aws_lambda/region_risk_lookup/lambda_function.py` via a single
+`get_item` call keyed on `region_name` - the whole reason this table exists
+is to make that a single-digit-millisecond lookup instead of a warehouse
+query.
+

@@ -9,3 +9,7 @@ scipy>=1.11
 pytest>=8.0
 ruff>=0.6
 boto3>=1.34
+
+# Only needed if you enable redshift.enabled in config and run
+# src/redshift_loader.py - not required for the core pipeline.
+redshift-connector>=2.1

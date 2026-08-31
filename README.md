@@ -87,13 +87,21 @@ src/
   transform.py                raster/vector zonal statistics
   warehouse.py                DuckDB load logic (star schema)
   report.py                   summary CSV + choropleth map
-  cloud_sync.py                optional S3 upload, off by default
-sql/schema.sql                warehouse DDL
-pipeline.py                   orchestrates all of the above
+  cloud_sync.py                S3 upload - real, deployed
+  dynamo_sync.py               DynamoDB sync - real, deployed
+  redshift_loader.py           Redshift loader - real code, not deployed (see docs/architecture.md)
+aws_lambda/region_risk_lookup/lambda_function.py   Lambda data service - real, deployed
+statemachine/region_risk_workflow.asl.json         Step Functions definition - real, deployed
+glue_jobs/transform_zonal_stats_glue.py            distributed zonal stats - real code, not deployed
+sql/
+  schema.sql                   DuckDB warehouse DDL
+  schema_redshift.sql          Redshift-dialect version (IDENTITY columns, DISTKEY/SORTKEY)
+pipeline.py                   orchestrates the core local pipeline
 tests/                        pytest unit tests
 docs/
-  architecture.md             how this maps onto an AWS deployment
-  data_dictionary.md          column-level docs for every warehouse table
+  architecture.md              what's deployed vs. code-only, and why, for every AWS piece
+  aws_live_deployment_guide.md  step-by-step console setup for the deployed pieces
+  data_dictionary.md            column-level docs for every warehouse + DynamoDB table
 .github/workflows/ci.yml      lint + test + full pipeline run on every push
 ```
 
@@ -116,16 +124,34 @@ docs/
 
 ## Extending to AWS
 
-The pipeline runs entirely locally (DuckDB instead of Redshift, local files
-instead of S3). `docs/architecture.md` has a full table mapping each piece
-to its AWS equivalent. `src/cloud_sync.py` has a working (but
-by-default-disabled) S3 upload using boto3 - turning it on requires your
-own AWS account and credentials configured locally via `aws configure`.
+The core pipeline runs entirely locally (DuckDB instead of Redshift, local
+files instead of S3). Beyond that, part of this project is a real AWS
+extension, not just a design doc:
+
+**Actually deployed, running on real AWS resources:**
+S3 (scoped IAM user, not full-access), DynamoDB (a fast lookup table
+synced from the warehouse), Lambda (a small data-service function reading
+from that table), EventBridge (a scheduled rule), and Step Functions (a
+state machine that calls the Lambda and branches on risk tier). All five
+sit within AWS's forever-free tier at this project's scale - see
+`docs/aws_live_deployment_guide.md` for exact setup steps and
+`docs/architecture.md` for what each piece does and why.
+
+**Real code, not deployed:**
+`src/redshift_loader.py` (with Redshift-specific DDL and the `COPY FROM
+S3` bulk-load pattern, not row-by-row inserts) and
+`glue_jobs/transform_zonal_stats_glue.py` (a distributed version of the
+zonal-stats logic - its core raster/vector overlay was verified locally
+against this project's real data and produces identical results to
+`src/transform.py`). Both were left undeployed because neither Redshift
+nor Glue has a forever-free tier - see `docs/architecture.md` for the
+full reasoning.
 
 ## Tech stack
 
 Python, GeoPandas, rasterio, shapely, DuckDB, matplotlib, pytest, ruff,
-GitHub Actions.
+GitHub Actions, boto3, AWS S3, DynamoDB, Lambda, EventBridge, Step
+Functions.
 
 ## Known limitations
 
