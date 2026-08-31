@@ -1,0 +1,40 @@
+{
+  "Comment": "Looks up a region's risk score and branches based on its risk tier. This is a deliberately small example of the orchestration pattern used elsewhere in this project's design - see docs/architecture.md for how pipeline.py's stages would map to a larger state machine.",
+  "StartAt": "GetRegionRisk",
+  "States": {
+    "GetRegionRisk": {
+      "Type": "Task",
+      "Resource": "REPLACE_WITH_LAMBDA_ARN",
+      "Comment": "Invokes the region-risk-lookup Lambda. In the console's visual editor you can pick the function from a dropdown instead of pasting an ARN here.",
+      "ResultSelector": {
+        "statusCode.$": "$.Payload.statusCode",
+        "body.$": "States.StringToJson($.Payload.body)"
+      },
+      "Next": "CheckRiskTier"
+    },
+    "CheckRiskTier": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Or": [
+            { "Variable": "$.body.risk_tier", "StringEquals": "Severe" },
+            { "Variable": "$.body.risk_tier", "StringEquals": "High" }
+          ],
+          "Next": "FlagForReview"
+        }
+      ],
+      "Default": "NoActionNeeded"
+    },
+    "FlagForReview": {
+      "Type": "Pass",
+      "Comment": "In a real deployment this would publish to an SNS topic or write to a review queue instead of just passing through.",
+      "Result": { "action": "flagged_for_review" },
+      "End": true
+    },
+    "NoActionNeeded": {
+      "Type": "Pass",
+      "Result": { "action": "no_action_needed" },
+      "End": true
+    }
+  }
+}
